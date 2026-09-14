@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker - Manage Your Money</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for the Pie Chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-container { padding-top: 40px; padding-bottom: 60px; }
+        
+        /* Premium Tab Styling */
+        .nav-pills .nav-link {
+            color: #667eea;
+            font-weight: 600;
+            padding: 10px 25px;
+            border-radius: 8px;
+            margin: 0 5px;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        .nav-pills .nav-link:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+        .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
+        }
+
+        .card { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border-radius: 15px 15px 0 0 !important; padding: 15px 20px;
+        }
+        .form-control, .form-select { border-radius: 8px; padding: 10px; border: 1px solid #ddd; }
+        .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 10px 25px; font-weight: 600;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); }
+        .btn-danger { border-radius: 5px; }
+        .summary-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); height: 100%; }
+        .summary-card h3 { color: #667eea; font-size: 1.8rem; font-weight: bold; margin: 10px 0; }
+        .summary-card p { color: #666; margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+        .icon-box { font-size: 2rem; }
+        .chart-container { position: relative; height: 250px; width: 100%; display: flex; justify-content: center; }
+    </style>
+</head>
+<body>
+
+    <div class="container main-container">
+        <!-- Header -->
+        <div class="text-center mb-4">
+            <h1 class="text-white display-5 fw-bold"><i class="fas fa-wallet me-2"></i>Expense Tracker</h1>
+            <p class="text-white-50">Developed by Ayan Paul</p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <ul class="nav nav-pills mb-4 justify-content-center" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pills-home-tab" data-bs-toggle="pill" data-bs-target="#pills-home" type="button" role="tab">
+                    <i class="fas fa-home me-2"></i>Home
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pills-monthly-tab" data-bs-toggle="pill" data-bs-target="#pills-monthly" type="button" role="tab">
+                    <i class="fas fa-calendar-alt me-2"></i>Monthly Totals
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pills-family-tab" data-bs-toggle="pill" data-bs-target="#pills-family" type="button" role="tab">
+                    <i class="fas fa-users me-2"></i>Family Expenses
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="pills-tabContent">
+            
+            <!-- HOME TAB -->
+            <div class="tab-pane fade show active" id="pills-home" role="tabpanel">
+                <!-- Summary Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="summary-card text-center">
+                            <div class="icon-box text-success"><i class="fas fa-calendar-check"></i></div>
+                            <h3 id="currentMonthExpenses" class="text-success">₹0.00</h3>
+                            <p>This Month's Expense</p>
+                            <small class="text-muted">Overall: <span id="overallExpenses">₹0.00</span></small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="summary-card text-center">
+                            <div class="icon-box text-primary"><i class="fas fa-receipt"></i></div>
+                            <h3 id="totalItems">0</h3>
+                            <p>Total Transactions</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="summary-card text-center">
+                            <div class="icon-box text-warning"><i class="fas fa-chart-pie"></i></div>
+                            <h3 id="topCategory">-</h3>
+                            <p>Top Category</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Left Column: Form & Table -->
+                    <div class="col-lg-8">
+                        <!-- Add Expense Form -->
+                        <div class="card mb-4">
+                            <div class="card-header"><h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add New Expense</h5></div>
+                            <div class="card-body">
+                                <form id="expenseForm">
+                                    <div class="row g-2">
+                                        <div class="col-md-2">
+                                            <input type="date" class="form-control" id="date" required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <select class="form-select" id="user" required>
+                                                <option value="Me">Me</option>
+                                                <option value="Spouse">Spouse</option>
+                                                <option value="Child">Child</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <select class="form-select" id="category" required>
+                                                <option value="">Category</option>
+                                                <option value="Food">🍔 Food</option>
+                                                <option value="Transport">🚗 Transport</option>
+                                                <option value="Shopping">🛍️ Shopping</option>
+                                                <option value="Entertainment">🎬🌐 Entertainment</option>
+                                                <option value="EMI">💰 EMI</option>
+                                                <option value="Bills">💡 Bills</option>
+                                                <option value="Health">🏥 Health</option>                                                
+                                                <option value="Home">🏠 Home</option>
+                                                <option value="Phone">📞 Phone</option>
+                                                <option value="Other">📦 Other</option>
+                                                <option value="MF+">💸 MF+</option>
+                                                <option value="Stocks+">📈 Stocks+</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" id="description" placeholder="Description" required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <input type="number" class="form-control" id="amount" placeholder="₹0.00" step="0.01" required>
+                                        </div>
+                                    </div>
+                                    <div class="text-end mt-3">
+                                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus me-1"></i> Add Expense</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Expenses Table -->
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-list-alt me-2"></i>History</h5>
+                                <button class="btn btn-sm btn-outline-light" onclick="clearAllExpenses()" id="clearBtn" style="display:none;">
+                                    <i class="fas fa-trash-alt me-1"></i> Clear All
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Category</th>
+                                                <th>Description</th>
+                                                <th class="text-end">Amount</th>
+                                                <th class="text-center">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="expenseTableBody"></tbody>
+                                    </table>
+                                </div>
+                                <div id="noExpenses" class="text-center text-muted py-5">
+                                    <i class="fas fa-inbox fa-3x mb-3 text-secondary"></i>
+                                    <p>No expenses yet. Add one above!</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Chart -->
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-header"><h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Spending by Category</h5></div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="expenseChart"></canvas>
+                                </div>
+                                <div id="noChartData" class="text-center text-muted py-4 mt-3">
+                                    <small>Add expenses to see the chart</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MONTHLY TOTALS TAB -->
+            <div class="tab-pane fade" id="pills-monthly" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Total Expenses Month Wise</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Month & Year</th>
+                                        <th class="text-end">Total Expense</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="monthlyTotalBody">
+                                    <!-- Populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noMonthlyData" class="text-center text-muted py-5" style="display: none;">
+                            <i class="fas fa-calendar-times fa-3x mb-3 text-secondary"></i>
+                            <p>No expenses recorded yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAMILY EXPENSES TAB -->
+            <div class="tab-pane fade" id="pills-family" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Family Expenses Comparison</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light" id="familyTableHead">
+                                    <!-- Dynamic Headers -->
+                                </thead>
+                                <tbody id="familyTableBody">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noFamilyData" class="text-center text-muted py-5" style="display: none;">
+                            <i class="fas fa-users-slash fa-3x mb-3 text-secondary"></i>
+                            <p>No family expenses recorded yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+       <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // --- PASTE YOUR FIREBASE CONFIG HERE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyApd9DjctdRjfUarmwzQyOEQYxvOfGlapI",
+            authDomain: "expense-tracker-a2026.firebaseapp.com",
+            projectId: "expense-tracker-a2026",
+            storageBucket: "expense-tracker-a2026.firebasestorage.app",
+            messagingSenderId: "194900105334",
+            appId: "1:194900105334:web:90f88de98384e2d3b16757",
+            measurementId: "G-JYW0V6CPYP"
+        };
+        // ---------------------------------------
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const expensesCollection = collection(db, "expenses");
+
+        let expenses = [];
+        let myChart = null;
+
+        document.getElementById('date').valueAsDate = new Date();
+
+        // --- REAL-TIME LISTENER ---
+        const q = query(expensesCollection, orderBy("date", "desc"));
+        onSnapshot(q, (snapshot) => {
+            expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            document.getElementById('loading').style.display = 'none';
+            renderApp();
+        });
+
+        window.formatCurrency = (amount) => '₹' + parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        window.getSortKey = (dateString) => { const d = new Date(dateString); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+        window.getDisplayMonth = (dateString) => new Date(dateString).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+        window.renderApp = function() {
+            const tbody = document.getElementById('expenseTableBody');
+            const noExpensesMsg = document.getElementById('noExpenses');
+            const clearBtn = document.getElementById('clearBtn');
+            const noChartData = document.getElementById('noChartData');
+
+            tbody.innerHTML = '';
+            if (expenses.length === 0) {
+                noExpensesMsg.style.display = 'block'; clearBtn.style.display = 'none'; noChartData.style.display = 'block';
+            } else {
+                noExpensesMsg.style.display = 'none'; clearBtn.style.display = 'inline-block'; noChartData.style.display = 'none';
+                expenses.forEach((exp) => {
+                    const userBadge = exp.user ? `<br><small class="text-muted"><i class="fas fa-user me-1"></i>${exp.user}</small>` : '';
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${new Date(exp.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                        <td><span class="badge bg-primary bg-opacity-75">${exp.category}</span>${userBadge}</td>
+                        <td>${exp.description}</td>
+                        <td class="text-end text-success fw-bold">${window.formatCurrency(exp.amount)}</td>
+                        <td class="text-center"><button class="btn btn-danger btn-sm" onclick="window.deleteExpense('${exp.id}')"><i class="fas fa-trash"></i></button></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+            updateSummary(); updateChart(); updateMonthlyTotals(); updateFamilyComparison();
+        }
+
+        document.getElementById('expenseForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+
+            try {
+                await addDoc(expensesCollection, {
+                    date: document.getElementById('date').value,
+                    user: document.getElementById('user').value,
+                    category: document.getElementById('category').value,
+                    description: document.getElementById('description').value,
+                    amount: document.getElementById('amount').value
+                });
+                document.getElementById('category').value = '';
+                document.getElementById('description').value = '';
+                document.getElementById('amount').value = '';
+            } catch (error) {
+                alert("Error saving: " + error.message);
+            }
+            btn.innerHTML = '<i class="fas fa-plus me-1"></i> Add Expense';
+            btn.disabled = false;
+        });
+
+        window.deleteExpense = async function(id) {
+            if(confirm('Delete this expense?')) {
+                try { await deleteDoc(doc(db, "expenses", id)); } catch (error) { alert("Error: " + error.message); }
+            }
+        }
+
+        window.clearAllExpenses = async function() {
+            if(confirm('Are you sure you want to delete ALL expenses? This cannot be undone.')) {
+                const snapshot = await getDocs(expensesCollection);
+                const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+                await Promise.all(deletePromises);
+            }
+        }
+
+        function updateSummary() {
+            const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+            document.getElementById('totalExpenses').textContent = window.formatCurrency(total);
+            document.getElementById('totalItems').textContent = expenses.length;
+            const categories = {};
+            expenses.forEach(exp => { categories[exp.category] = (categories[exp.category] || 0) + parseFloat(exp.amount); });
+            const topCat = Object.keys(categories).reduce((a, b) => categories[a] > categories[b] ? a : b, '-');
+            document.getElementById('topCategory').textContent = expenses.length > 0 ? topCat : '-';
+        }
+
+        function updateMonthlyTotals() {
+            const monthlyData = {};
+            expenses.forEach(exp => {
+                const sortKey = window.getSortKey(exp.date);
+                if (!monthlyData[sortKey]) monthlyData[sortKey] = { display: window.getDisplayMonth(exp.date), total: 0 };
+                monthlyData[sortKey].total += parseFloat(exp.amount);
+            });
+            const tbody = document.getElementById('monthlyTotalBody');
+            const noDataMsg = document.getElementById('noMonthlyData');
+            tbody.innerHTML = '';
+            const sortedKeys = Object.keys(monthlyData).sort().reverse();
+            if (sortedKeys.length === 0) { noDataMsg.style.display = 'block'; } 
+            else {
+                noDataMsg.style.display = 'none';
+                sortedKeys.forEach(key => {
+                    tbody.innerHTML += `<tr><td class="fw-bold">${monthlyData[key].display}</td><td class="text-end text-success fw-bold fs-5">${window.formatCurrency(monthlyData[key].total)}</td></tr>`;
+                });
+            }
+        }
+
+        function updateFamilyComparison() {
+            const users = [...new Set(expenses.map(e => e.user || 'Me'))].sort();
+            const monthKeys = [...new Set(expenses.map(e => window.getSortKey(e.date)))].sort().reverse();
+            const headRow = document.getElementById('familyTableHead');
+            const tbody = document.getElementById('familyTableBody');
+            const noDataMsg = document.getElementById('noFamilyData');
+            headRow.innerHTML = ''; tbody.innerHTML = '';
+            if (expenses.length === 0) { noDataMsg.style.display = 'block'; return; }
+            noDataMsg.style.display = 'none';
+            let headerHTML = '<tr><th>Month & Year</th>';
+            users.forEach(user => { headerHTML += `<th class="text-end">${user}</th>`; });
+            headerHTML += '<th class="text-end text-primary">Total</th></tr>';
+            headRow.innerHTML = headerHTML;
+            monthKeys.forEach(monthKey => {
+                const monthExpenses = expenses.filter(e => window.getSortKey(e.date) === monthKey);
+                let rowHTML = `<tr><td class="fw-bold">${window.getDisplayMonth(monthExpenses[0].date)}</td>`;
+                let monthTotal = 0;
+                users.forEach(user => {
+                    const userTotal = monthExpenses.filter(e => (e.user || 'Me') === user).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+                    monthTotal += userTotal;
+                    rowHTML += `<td class="text-end">${window.formatCurrency(userTotal)}</td>`;
+                });
+                rowHTML += `<td class="text-end text-primary fw-bold">${window.formatCurrency(monthTotal)}</td></tr>`;
+                tbody.innerHTML += rowHTML;
+            });
+        }
+
+        function updateChart() {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            const categories = {};
+            expenses.forEach(exp => { categories[exp.category] = (categories[exp.category] || 0) + parseFloat(exp.amount); });
+            if (myChart) myChart.destroy();
+            if (Object.keys(categories).length > 0) {
+                myChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels: Object.keys(categories), datasets: [{ data: Object.values(categories), backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40', '#c9cbcf'], borderWidth: 2, borderColor: '#ffffff' }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
