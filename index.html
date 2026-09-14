@@ -3,143 +3,677 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expense Tracker</title>
+    <title>Expense Tracker - Manage Your Money</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
-        /* Basic Styling to make it look better */
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #f9f9f9;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        h1, h2 {
-            color: #333;
+        .main-container { padding-top: 20px; padding-bottom: 60px; }
+        
+        /* Premium Tab Navigation */
+        .tab-navigation {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
-        .input-group {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
+        .nav-pills .nav-link {
+            color: #667eea;
+            font-weight: 600;
+            padding: 12px 25px;
+            border-radius: 10px;
+            margin: 0 5px;
+            transition: all 0.3s;
         }
-        input {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            flex: 1;
+        .nav-pills .nav-link:hover {
+            background: rgba(102, 126, 234, 0.1);
         }
-        button {
-            padding: 8px 15px;
-            background-color: #28a745;
+        .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
-        button:hover {
-            background-color: #218838;
+        .nav-pills .nav-link i {
+            margin-right: 8px;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        
+        .card { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); margin-bottom: 20px; }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border-radius: 15px 15px 0 0 !important; padding: 15px 20px;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
+        .form-control, .form-select { border-radius: 8px; padding: 10px; border: 1px solid #ddd; }
+        .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 10px 25px; font-weight: 600;
         }
-        th {
-            background-color: #f4f4f4;
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); }
+        .btn-warning { border-radius: 5px; }
+        .btn-danger { border-radius: 5px; }
+        
+        .summary-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); height: 100%; transition: transform 0.3s; }
+        .summary-card:hover { transform: translateY(-5px); }
+        .summary-card h3 { color: #667eea; font-size: 1.8rem; font-weight: bold; margin: 10px 0; }
+        .summary-card p { color: #666; margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+        .icon-box { font-size: 2rem; }
+        
+        .chart-container { position: relative; height: 300px; width: 100%; }
+        .monthly-total {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
         }
-        .delete-btn {
-            background-color: #dc3545;
-            padding: 5px 10px;
-        }
-        .delete-btn:hover {
-            background-color: #c82333;
+        .monthly-total h4 { margin: 0; font-size: 1.5rem; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
-    <h1>My Expense Tracker</h1>
+    <div class="container main-container">
+        <!-- Header -->
+        <div class="text-center mb-4">
+            <h1 class="text-white display-5 fw-bold"><i class="fas fa-wallet me-2"></i>Expense Tracker</h1>
+            <p class="text-white-50">Track, analyze, and manage your finances</p>
+        </div>
 
-    <!-- Input Form -->
-    <div class="input-group">
-        <input type="date" id="date">
-        <input type="text" id="category" placeholder="Category (e.g., Food)">
-        <input type="text" id="description" placeholder="Description">
-        <input type="number" id="amount" placeholder="Amount">
-        <button onclick="addExpense()">Add Expense</button>
+        <!-- Premium Tab Navigation -->
+        <div class="tab-navigation">
+            <ul class="nav nav-pills justify-content-center" id="mainTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="home-tab" data-bs-toggle="pill" data-bs-target="#home" type="button" role="tab">
+                        <i class="fas fa-home"></i>Home
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="monthly-tab" data-bs-toggle="pill" data-bs-target="#monthly" type="button" role="tab">
+                        <i class="fas fa-chart-line"></i>Monthly Chart
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="quarterly-tab" data-bs-toggle="pill" data-bs-target="#quarterly" type="button" role="tab">
+                        <i class="fas fa-chart-bar"></i>Quarterly Chart
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="yearly-tab" data-bs-toggle="pill" data-bs-target="#yearly" type="button" role="tab">
+                        <i class="fas fa-chart-area"></i>Yearly Chart
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="mainTabContent">
+            
+            <!-- HOME TAB -->
+            <div class="tab-pane fade show active" id="home" role="tabpanel">
+                <!-- Summary Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="summary-card text-center">
+                            <div class="icon-box text-success"><i class="fas fa-rupee-sign"></i></div>
+                            <h3 id="totalExpenses">₹0</h3>
+                            <p>Total Spent</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="summary-card text-center">
+                            <div class="icon-box text-primary"><i class="fas fa-receipt"></i></div>
+                            <h3 id="totalItems">0</h3>
+                            <p>Total Transactions</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="summary-card text-center">
+                            <div class="icon-box text-warning"><i class="fas fa-chart-pie"></i></div>
+                            <h3 id="topCategory">-</h3>
+                            <p>Top Category</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Left Column: Form & Table -->
+                    <div class="col-lg-8">
+                        <!-- Add Expense Form -->
+                        <div class="card mb-4">
+                            <div class="card-header"><h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add New Expense</h5></div>
+                            <div class="card-body">
+                                <form id="expenseForm">
+                                    <input type="hidden" id="editIndex" value="-1">
+                                    <div class="row g-2">
+                                        <div class="col-md-3">
+                                            <input type="date" class="form-control" id="date" required>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <select class="form-select" id="category" required>
+                                                <option value="">Category</option>
+                                                <option value="Food">🍔 Food</option>
+                                                <option value="Transport">🚗 Transport</option>
+                                                <option value="Shopping">️ Shopping</option>
+                                                <option value="Entertainment">🎬 Entertainment</option>
+                                                <option value="Bills">💡 Bills</option>
+                                                <option value="Health"> Health</option>
+                                                <option value="Education">📚 Education</option>
+                                                <option value="Other">📦 Other</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control" id="description" placeholder="Description" required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <input type="number" class="form-control" id="amount" placeholder="₹0" step="0.01" required>
+                                        </div>
+                                    </div>
+                                    <div class="text-end mt-3">
+                                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                                            <i class="fas fa-plus me-1"></i> Add Expense
+                                        </button>
+                                        <button type="button" class="btn btn-secondary ms-2" id="cancelEdit" style="display:none;" onclick="cancelEdit()">
+                                            <i class="fas fa-times me-1"></i> Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Expenses Table -->
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-list-alt me-2"></i>Expense History</h5>
+                                <button class="btn btn-sm btn-outline-light" onclick="clearAllExpenses()" id="clearBtn" style="display:none;">
+                                    <i class="fas fa-trash-alt me-1"></i> Clear All
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Category</th>
+                                                <th>Description</th>
+                                                <th class="text-end">Amount</th>
+                                                <th class="text-center">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="expenseTableBody"></tbody>
+                                    </table>
+                                </div>
+                                <div id="noExpenses" class="text-center text-muted py-5">
+                                    <i class="fas fa-inbox fa-3x mb-3 text-secondary"></i>
+                                    <p>No expenses yet. Add one above!</p>
+                                </div>
+                                <!-- Monthly Total -->
+                                <div id="monthlyTotalSection" class="monthly-total" style="display:none;">
+                                    <h4><i class="fas fa-calendar-month me-2"></i>This Month's Total: <span id="monthlyTotal">₹0</span></h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Pie Chart -->
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-header"><h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Category Breakdown</h5></div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="categoryChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MONTHLY CHART TAB -->
+            <div class="tab-pane fade" id="monthly" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Monthly Expense Trend</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container" style="height: 400px;">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUARTERLY CHART TAB -->
+            <div class="tab-pane fade" id="quarterly" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Quarterly Expense Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container" style="height: 400px;">
+                            <canvas id="quarterlyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- YEARLY CHART TAB -->
+            <div class="tab-pane fade" id="yearly" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>Yearly Expense Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container" style="height: 400px;">
+                            <canvas id="yearlyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <h2>Expenses</h2>
-
-    <!-- Expenses Table -->
-    <table id="expenseTable">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th>Amount</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Expenses will be added here by JavaScript -->
-        </tbody>
-    </table>
-
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
-        // JavaScript to make the app work
-        function addExpense() {
-            // 1. Get values from the input fields
-            const date = document.getElementById('date').value;
-            const category = document.getElementById('category').value;
-            const description = document.getElementById('description').value;
-            const amount = document.getElementById('amount').value;
+        // --- DATA MANAGEMENT ---
+        let expenses = JSON.parse(localStorage.getItem('myExpenses')) || [];
+        let categoryChart = null;
+        let monthlyChart = null;
+        let quarterlyChart = null;
+        let yearlyChart = null;
 
-            // 2. Check if fields are empty
-            if (!date || !category || !description || !amount) {
-                alert("Please fill in all fields!");
-                return;
+        document.getElementById('date').valueAsDate = new Date();
+
+        function saveData() {
+            localStorage.setItem('myExpenses', JSON.stringify(expenses));
+        }
+
+        function formatCurrency(amount) {
+            return '' + parseFloat(amount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('en-IN', options);
+        }
+
+        function getMonthYear(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+        }
+
+        function getQuarter(dateString) {
+            const date = new Date(dateString);
+            const month = date.getMonth();
+            const quarter = Math.floor(month / 3) + 1;
+            return `Q${quarter} ${date.getFullYear()}`;
+        }
+
+        function getYear(dateString) {
+            return new Date(dateString).getFullYear();
+        }
+
+        // --- CORE FUNCTIONS ---
+        function renderApp() {
+            const tbody = document.getElementById('expenseTableBody');
+            const noExpensesMsg = document.getElementById('noExpenses');
+            const clearBtn = document.getElementById('clearBtn');
+            const monthlyTotalSection = document.getElementById('monthlyTotalSection');
+
+            tbody.innerHTML = '';
+            
+            if (expenses.length === 0) {
+                noExpensesMsg.style.display = 'block';
+                clearBtn.style.display = 'none';
+                monthlyTotalSection.style.display = 'none';
+            } else {
+                noExpensesMsg.style.display = 'none';
+                clearBtn.style.display = 'inline-block';
+                monthlyTotalSection.style.display = 'block';
+
+                const sortedExpenses = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+                const currentMonth = new Date().toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+                let monthlyTotal = 0;
+
+                sortedExpenses.forEach((exp, index) => {
+                    const originalIndex = expenses.indexOf(exp);
+                    const expenseMonthYear = getMonthYear(exp.date);
+                    if (expenseMonthYear === currentMonth) {
+                        monthlyTotal += parseFloat(exp.amount);
+                    }
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${formatDate(exp.date)}</td>
+                        <td><span class="badge bg-primary bg-opacity-75">${exp.category}</span></td>
+                        <td>${exp.description}</td>
+                        <td class="text-end text-success fw-bold">${formatCurrency(exp.amount)}</td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm me-1" onclick="editExpense(${originalIndex})" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteExpense(${originalIndex})" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                document.getElementById('monthlyTotal').textContent = formatCurrency(monthlyTotal);
             }
 
-            // 3. Create a new table row
-            const tableBody = document.querySelector('#expenseTable tbody');
-            const newRow = document.createElement('tr');
-
-            newRow.innerHTML = `
-                <td>${date}</td>
-                <td>${category}</td>
-                <td>${description}</td>
-                <td>$${amount}</td>
-                <td><button class="delete-btn" onclick="deleteExpense(this)">Delete</button></td>
-            `;
-
-            // 4. Add the row to the table
-            tableBody.appendChild(newRow);
-
-            // 5. Clear the input fields
-            document.getElementById('category').value = '';
-            document.getElementById('description').value = '';
-            document.getElementById('amount').value = '';
+            updateSummary();
+            updateCategoryChart();
+            updateMonthlyChart();
+            updateQuarterlyChart();
+            updateYearlyChart();
         }
 
-        // Function to delete a row
-        function deleteExpense(button) {
-            const row = button.parentElement.parentElement;
-            row.remove();
+        function addExpense(e) {
+            e.preventDefault();
+            const editIndex = parseInt(document.getElementById('editIndex').value);
+            
+            const expenseData = {
+                date: document.getElementById('date').value,
+                category: document.getElementById('category').value,
+                description: document.getElementById('description').value,
+                amount: document.getElementById('amount').value
+            };
+
+            if (editIndex === -1) {
+                expenses.push(expenseData);
+            } else {
+                expenses[editIndex] = expenseData;
+            }
+
+            saveData();
+            renderApp();
+            resetForm();
         }
+
+        function editExpense(index) {
+            const expense = expenses[index];
+            document.getElementById('date').value = expense.date;
+            document.getElementById('category').value = expense.category;
+            document.getElementById('description').value = expense.description;
+            document.getElementById('amount').value = expense.amount;
+            document.getElementById('editIndex').value = index;
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save me-1"></i> Update Expense';
+            document.getElementById('cancelEdit').style.display = 'inline-block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            resetForm();
+        }
+
+        function resetForm() {
+            document.getElementById('expenseForm').reset();
+            document.getElementById('date').valueAsDate = new Date();
+            document.getElementById('editIndex').value = -1;
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-plus me-1"></i> Add Expense';
+            document.getElementById('cancelEdit').style.display = 'none';
+        }
+
+        function deleteExpense(index) {
+            if(confirm('Delete this expense?')) {
+                expenses.splice(index, 1);
+                saveData();
+                renderApp();
+            }
+        }
+
+        function clearAllExpenses() {
+            if(confirm('Are you sure you want to delete ALL expenses? This cannot be undone.')) {
+                expenses = [];
+                saveData();
+                renderApp();
+            }
+        }
+
+        // --- CHART UPDATES ---
+        function updateSummary() {
+            const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+            document.getElementById('totalExpenses').textContent = formatCurrency(total);
+            document.getElementById('totalItems').textContent = expenses.length;
+
+            const categories = {};
+            expenses.forEach(exp => { 
+                categories[exp.category] = (categories[exp.category] || 0) + parseFloat(exp.amount); 
+            });
+            const topCat = Object.keys(categories).reduce((a, b) => categories[a] > categories[b] ? a : b, '-');
+            document.getElementById('topCategory').textContent = expenses.length > 0 ? topCat : '-';
+        }
+
+        function updateCategoryChart() {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            const categories = {};
+            
+            expenses.forEach(exp => {
+                categories[exp.category] = (categories[exp.category] || 0) + parseFloat(exp.amount);
+            });
+
+            const labels = Object.keys(categories);
+            const data = Object.values(categories);
+
+            if (categoryChart) categoryChart.destroy();
+
+            if (labels.length > 0) {
+                categoryChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40', '#c9cbcf', '#7bc225'],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10 } }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateMonthlyChart() {
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            const monthlyData = {};
+            
+            expenses.forEach(exp => {
+                const monthYear = getMonthYear(exp.date);
+                monthlyData[monthYear] = (monthlyData[monthYear] || 0) + parseFloat(exp.amount);
+            });
+
+            const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
+                const [monthA, yearA] = a.split(' ');
+                const [monthB, yearB] = b.split(' ');
+                const dateA = new Date(yearA, new Date(Date.parse(monthA + " 1, 2000")).getMonth());
+                const dateB = new Date(yearB, new Date(Date.parse(monthB + " 1, 2000")).getMonth());
+                return dateA - dateB;
+            });
+
+            const labels = sortedMonths;
+            const data = sortedMonths.map(month => monthlyData[month]);
+
+            if (monthlyChart) monthlyChart.destroy();
+
+            if (labels.length > 0) {
+                monthlyChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Monthly Expenses (₹)',
+                            data: data,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₹' + value.toLocaleString('en-IN');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateQuarterlyChart() {
+            const ctx = document.getElementById('quarterlyChart').getContext('2d');
+            const quarterlyData = {};
+            
+            expenses.forEach(exp => {
+                const quarter = getQuarter(exp.date);
+                quarterlyData[quarter] = (quarterlyData[quarter] || 0) + parseFloat(exp.amount);
+            });
+
+            const sortedQuarters = Object.keys(quarterlyData).sort();
+            const labels = sortedQuarters;
+            const data = sortedQuarters.map(q => quarterlyData[q]);
+
+            if (quarterlyChart) quarterlyChart.destroy();
+
+            if (labels.length > 0) {
+                quarterlyChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Quarterly Expenses (₹)',
+                            data: data,
+                            backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                            borderColor: '#667eea',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₹' + value.toLocaleString('en-IN');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateYearlyChart() {
+            const ctx = document.getElementById('yearlyChart').getContext('2d');
+            const yearlyData = {};
+            
+            expenses.forEach(exp => {
+                const year = getYear(exp.date);
+                yearlyData[year] = (yearlyData[year] || 0) + parseFloat(exp.amount);
+            });
+
+            const sortedYears = Object.keys(yearlyData).sort();
+            const labels = sortedYears;
+            const data = sortedYears.map(year => yearlyData[year]);
+
+            if (yearlyChart) yearlyChart.destroy();
+
+            if (labels.length > 0) {
+                yearlyChart = new Chart(ctx, {
+                    type: 'area',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Yearly Expenses (₹)',
+                            data: data,
+                            backgroundColor: 'rgba(245, 87, 108, 0.3)',
+                            borderColor: '#f5576c',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₹' + value.toLocaleString('en-IN');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('expenseForm').addEventListener('submit', addExpense);
+
+        // Tab switching - update charts when tabs are clicked
+        document.querySelectorAll('[data-bs-toggle="pill"]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function (e) {
+                setTimeout(() => {
+                    if (monthlyChart) monthlyChart.resize();
+                    if (quarterlyChart) quarterlyChart.resize();
+                    if (yearlyChart) yearlyChart.resize();
+                }, 100);
+            });
+        });
+
+        // Initial Render
+        renderApp();
     </script>
-
 </body>
 </html>
