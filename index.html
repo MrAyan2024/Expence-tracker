@@ -101,9 +101,11 @@
             </h1>
             <p class="text-white-50 fs-5 text-center mt-2 mb-0">Developed by Ayan Paul</p>
         </div>
-            <button class="btn btn-outline-light btn-sm" onclick="window.logoutUser()">
-                <i class="fas fa-sign-out-alt me-1"></i> Logout
-            </button>
+            <div class="flex-grow-1 text-end">
+                <button class="btn btn-outline-light btn-sm rounded-pill px-3" onclick="logout()">
+                    <i class="fas fa-sign-out-alt me-1"></i> Logout
+                </button>
+            </div>
         </div>
         <p class="text-white-50 text-center mb-4">Logged in as: <span id="userEmailDisplay" class="fw-bold text-white"></span></p>
 
