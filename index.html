@@ -94,9 +94,10 @@
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
                         <div class="summary-card text-center">
-                            <div class="icon-box text-success"><i class="fas fa-rupee-sign"></i></div>
-                            <h3 id="totalExpenses">₹0.00</h3>
-                            <p>Total Spent</p>
+                            <div class="icon-box text-success"><i class="fas fa-calendar-check"></i></div>
+                            <h3 id="currentMonthExpenses" class="text-success">₹0.00</h3>
+                            <p>This Month's Expense</p>
+                            <small class="text-muted">Overall: <span id="overallExpenses">₹0.00</span></small>
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -150,7 +151,6 @@
                                                 <option value="Other">📦 Other</option>
                                                 <option value="MF+">💸 MF+</option>
                                                 <option value="Stocks+">📈 Stocks+</option>
-                                                
                                             </select>
                                         </div>
                                         <div class="col-md-3">
@@ -344,14 +344,14 @@
             updateSummary();
             updateChart();
             updateMonthlyTotals();
-            updateFamilyComparison(); // <-- New function call
+            updateFamilyComparison();
         }
 
         function addExpense(e) {
             e.preventDefault();
             const newExpense = {
                 date: document.getElementById('date').value,
-                user: document.getElementById('user').value, // <-- Captures family member
+                user: document.getElementById('user').value,
                 category: document.getElementById('category').value,
                 description: document.getElementById('description').value,
                 amount: document.getElementById('amount').value
@@ -385,14 +385,45 @@
 
         // --- 3. UI UPDATES ---
         function updateSummary() {
-            const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
-            document.getElementById('totalExpenses').textContent = formatCurrency(total);
+            const now = new Date();
+            const currentMonth = now.getMonth(); // 0-11
+            const currentYear = now.getFullYear();
+
+            let currentMonthTotal = 0;
+            let overallTotal = 0;
+
+            expenses.forEach(exp => {
+                const amount = parseFloat(exp.amount) || 0;
+                overallTotal += amount;
+                
+                // Safely parse YYYY-MM-DD to avoid timezone offset issues
+                const dateParts = exp.date.split('-');
+                if (dateParts.length === 3) {
+                    const expYear = parseInt(dateParts[0], 10);
+                    const expMonth = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+                    
+                    if (expYear === currentYear && expMonth === currentMonth) {
+                        currentMonthTotal += amount;
+                    }
+                }
+            });
+
+            // Update DOM with Monthly and Overall totals
+            document.getElementById('currentMonthExpenses').textContent = formatCurrency(currentMonthTotal);
+            document.getElementById('overallExpenses').textContent = formatCurrency(overallTotal);
             document.getElementById('totalItems').textContent = expenses.length;
 
+            // Calculate Top Category
             const categories = {};
-            expenses.forEach(exp => { categories[exp.category] = (categories[exp.category] || 0) + parseFloat(exp.amount); });
-            const topCat = Object.keys(categories).reduce((a, b) => categories[a] > categories[b] ? a : b, '-');
-            document.getElementById('topCategory').textContent = expenses.length > 0 ? topCat : '-';
+            expenses.forEach(exp => { 
+                const cat = exp.category || 'Uncategorized';
+                categories[cat] = (categories[cat] || 0) + (parseFloat(exp.amount) || 0); 
+            });
+            
+            const topCat = Object.keys(categories).length > 0 
+                ? Object.keys(categories).reduce((a, b) => categories[a] > categories[b] ? a : b) 
+                : '-';
+            document.getElementById('topCategory').textContent = topCat;
         }
 
         function updateMonthlyTotals() {
@@ -429,11 +460,8 @@
             }
         }
 
-        // --- NEW: FAMILY COMPARISON LOGIC ---
         function updateFamilyComparison() {
-            // Get unique users (default to 'Me' for older records)
             const users = [...new Set(expenses.map(e => e.user || 'Me'))].sort();
-            // Get unique months, sorted newest first
             const monthKeys = [...new Set(expenses.map(e => getSortKey(e.date)))].sort().reverse();
             
             const headRow = document.getElementById('familyTableHead');
@@ -449,7 +477,6 @@
             }
             noDataMsg.style.display = 'none';
             
-            // Build Dynamic Header
             let headerHTML = '<tr><th>Month & Year</th>';
             users.forEach(user => {
                 headerHTML += `<th class="text-end">${user}</th>`;
@@ -457,7 +484,6 @@
             headerHTML += '<th class="text-end text-primary">Total</th></tr>';
             headRow.innerHTML = headerHTML;
             
-            // Build Dynamic Rows
             monthKeys.forEach(monthKey => {
                 const monthExpenses = expenses.filter(e => getSortKey(e.date) === monthKey);
                 const displayMonth = getDisplayMonth(monthExpenses[0].date);
