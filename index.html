@@ -95,11 +95,12 @@
     <!-- MAIN APP (Hidden until logged in) -->
     <div class="container main-container" id="mainApp" style="display: none;">
         <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="text-white display-5 fw-bold mb-0"><i class="fas fa-wallet me-2"></i>Expense Tracker</h1>
-                <p class="text-black-50 mb-0">Developed by Ayan Paul</p>
-            </div>
+        <div class="d-flex flex-column align-items-center justify-content-center mb-5" style="min-height: 25vh;">
+            <h1 class="text-white display-4 fw-bold text-center">
+                <i class="fas fa-wallet me-2"></i>Expense Tracker
+            </h1>
+            <p class="text-white-50 fs-5 text-center mt-2 mb-0">Developed by Ayan Paul</p>
+        </div>
             <button class="btn btn-outline-light btn-sm" onclick="window.logoutUser()">
                 <i class="fas fa-sign-out-alt me-1"></i> Logout
             </button>
