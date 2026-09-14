@@ -63,7 +63,7 @@
         <!-- Header -->
         <div class="text-center mb-4">
             <h1 class="text-white display-5 fw-bold"><i class="fas fa-wallet me-2"></i>Expense Tracker</h1>
-            <p class="text-white-50">Developed By Ayan Paul</p>
+            <p class="text-white-50">Developed by Ayan Paul</p>
         </div>
 
         <!-- Tab Navigation -->
@@ -76,6 +76,11 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="pills-monthly-tab" data-bs-toggle="pill" data-bs-target="#pills-monthly" type="button" role="tab">
                     <i class="fas fa-calendar-alt me-2"></i>Monthly Totals
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pills-family-tab" data-bs-toggle="pill" data-bs-target="#pills-family" type="button" role="tab">
+                    <i class="fas fa-users me-2"></i>Family Expenses
                 </button>
             </li>
         </ul>
@@ -119,8 +124,16 @@
                             <div class="card-body">
                                 <form id="expenseForm">
                                     <div class="row g-2">
-                                        <div class="col-md-3">
+                                        <div class="col-md-2">
                                             <input type="date" class="form-control" id="date" required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <select class="form-select" id="user" required>
+                                                <option value="Me">Me</option>
+                                                <option value="Spouse">Spouse</option>
+                                                <option value="Child">Child</option>
+                                                <option value="Other">Other</option>
+                                            </select>
                                         </div>
                                         <div class="col-md-3">
                                             <select class="form-select" id="category" required>
@@ -134,7 +147,7 @@
                                                 <option value="Other">📦 Other</option>
                                             </select>
                                         </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
                                             <input type="text" class="form-control" id="description" placeholder="Description" required>
                                         </div>
                                         <div class="col-md-2">
@@ -224,6 +237,31 @@
                 </div>
             </div>
 
+            <!-- FAMILY EXPENSES TAB -->
+            <div class="tab-pane fade" id="pills-family" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Family Expenses Comparison</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light" id="familyTableHead">
+                                    <!-- Dynamic Headers -->
+                                </thead>
+                                <tbody id="familyTableBody">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noFamilyData" class="text-center text-muted py-5" style="display: none;">
+                            <i class="fas fa-users-slash fa-3x mb-3 text-secondary"></i>
+                            <p>No family expenses recorded yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -279,10 +317,12 @@
 
                 sortedExpenses.forEach((exp, index) => {
                     const originalIndex = expenses.indexOf(exp);
+                    const userBadge = exp.user ? `<br><small class="text-muted"><i class="fas fa-user me-1"></i>${exp.user}</small>` : '';
+                    
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${new Date(exp.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
-                        <td><span class="badge bg-primary bg-opacity-75">${exp.category}</span></td>
+                        <td><span class="badge bg-primary bg-opacity-75">${exp.category}</span>${userBadge}</td>
                         <td>${exp.description}</td>
                         <td class="text-end text-success fw-bold">${formatCurrency(exp.amount)}</td>
                         <td class="text-center">
@@ -297,13 +337,15 @@
 
             updateSummary();
             updateChart();
-            updateMonthlyTotals(); // <-- New function call
+            updateMonthlyTotals();
+            updateFamilyComparison(); // <-- New function call
         }
 
         function addExpense(e) {
             e.preventDefault();
             const newExpense = {
                 date: document.getElementById('date').value,
+                user: document.getElementById('user').value, // <-- Captures family member
                 category: document.getElementById('category').value,
                 description: document.getElementById('description').value,
                 amount: document.getElementById('amount').value
@@ -313,7 +355,7 @@
             saveData();
             renderApp();
 
-            // Reset form (keep date)
+            // Reset form (keep date and user)
             document.getElementById('category').value = '';
             document.getElementById('description').value = '';
             document.getElementById('amount').value = '';
@@ -350,7 +392,6 @@
         function updateMonthlyTotals() {
             const monthlyData = {};
             
-            // Group expenses by month
             expenses.forEach(exp => {
                 const sortKey = getSortKey(exp.date);
                 const displayMonth = getDisplayMonth(exp.date);
@@ -365,7 +406,6 @@
             const noDataMsg = document.getElementById('noMonthlyData');
             tbody.innerHTML = '';
 
-            // Sort keys descending (newest month first)
             const sortedKeys = Object.keys(monthlyData).sort().reverse();
 
             if (sortedKeys.length === 0) {
@@ -381,6 +421,55 @@
                     tbody.appendChild(row);
                 });
             }
+        }
+
+        // --- NEW: FAMILY COMPARISON LOGIC ---
+        function updateFamilyComparison() {
+            // Get unique users (default to 'Me' for older records)
+            const users = [...new Set(expenses.map(e => e.user || 'Me'))].sort();
+            // Get unique months, sorted newest first
+            const monthKeys = [...new Set(expenses.map(e => getSortKey(e.date)))].sort().reverse();
+            
+            const headRow = document.getElementById('familyTableHead');
+            const tbody = document.getElementById('familyTableBody');
+            const noDataMsg = document.getElementById('noFamilyData');
+            
+            headRow.innerHTML = '';
+            tbody.innerHTML = '';
+            
+            if (expenses.length === 0) {
+                noDataMsg.style.display = 'block';
+                return;
+            }
+            noDataMsg.style.display = 'none';
+            
+            // Build Dynamic Header
+            let headerHTML = '<tr><th>Month & Year</th>';
+            users.forEach(user => {
+                headerHTML += `<th class="text-end">${user}</th>`;
+            });
+            headerHTML += '<th class="text-end text-primary">Total</th></tr>';
+            headRow.innerHTML = headerHTML;
+            
+            // Build Dynamic Rows
+            monthKeys.forEach(monthKey => {
+                const monthExpenses = expenses.filter(e => getSortKey(e.date) === monthKey);
+                const displayMonth = getDisplayMonth(monthExpenses[0].date);
+                
+                let rowHTML = `<tr><td class="fw-bold">${displayMonth}</td>`;
+                let monthTotal = 0;
+                
+                users.forEach(user => {
+                    const userTotal = monthExpenses
+                        .filter(e => (e.user || 'Me') === user)
+                        .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+                    monthTotal += userTotal;
+                    rowHTML += `<td class="text-end">${formatCurrency(userTotal)}</td>`;
+                });
+                
+                rowHTML += `<td class="text-end text-primary fw-bold">${formatCurrency(monthTotal)}</td></tr>`;
+                tbody.innerHTML += rowHTML;
+            });
         }
 
         function updateChart() {
