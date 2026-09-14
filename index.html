@@ -161,7 +161,7 @@
                                         </div>
                                     </div>
                                     <div class="text-end mt-3">
-                                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus me-1"></i> Add Expense</button>
+                                        <button type="submit" class="btn btn-primary" id="submitBtn"><i class="fas fa-plus me-1"></i> Add Expense</button>
                                     </div>
                                 </form>
                             </div>
@@ -171,7 +171,7 @@
                         <div class="card">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0"><i class="fas fa-list-alt me-2"></i>History</h5>
-                                <button class="btn btn-sm btn-outline-light" onclick="clearAllExpenses()" id="clearBtn" style="display:none;">
+                                <button class="btn btn-sm btn-outline-light" onclick="window.clearAllExpenses()" id="clearBtn" style="display:none;">
                                     <i class="fas fa-trash-alt me-1"></i> Clear All
                                 </button>
                             </div>
@@ -274,20 +274,19 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-        <!-- Firebase SDK -->
+    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- PASTE YOUR FIREBASE CONFIG HERE ---
         const firebaseConfig = {
-            apiKey: "AIzaSyApd9DjctdRjfUarmwzQyOEQYxvOfGlapI",
-            authDomain: "expense-tracker-a2026.firebaseapp.com",
-            projectId: "expense-tracker-a2026",
-            storageBucket: "expense-tracker-a2026.firebasestorage.app",
-            messagingSenderId: "194900105334",
-            appId: "1:194900105334:web:90f88de98384e2d3b16757",
-            measurementId: "G-JYW0V6CPYP"
+            apiKey: "PASTE_YOUR_API_KEY_HERE",
+            authDomain: "PASTE_YOUR_AUTH_DOMAIN_HERE",
+            projectId: "PASTE_YOUR_PROJECT_ID_HERE",
+            storageBucket: "PASTE_YOUR_STORAGE_BUCKET_HERE",
+            messagingSenderId: "PASTE_YOUR_SENDER_ID_HERE",
+            appId: "PASTE_YOUR_APP_ID_HERE"
         };
         // ---------------------------------------
 
@@ -300,29 +299,44 @@
 
         document.getElementById('date').valueAsDate = new Date();
 
-        // --- REAL-TIME LISTENER ---
+        // --- REAL-TIME LISTENER (Replaces Local Storage) ---
         const q = query(expensesCollection, orderBy("date", "desc"));
         onSnapshot(q, (snapshot) => {
             expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            document.getElementById('loading').style.display = 'none';
             renderApp();
         });
 
-        window.formatCurrency = (amount) => '₹' + parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        window.getSortKey = (dateString) => { const d = new Date(dateString); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
-        window.getDisplayMonth = (dateString) => new Date(dateString).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+        function getSortKey(dateString) {
+            const date = new Date(dateString);
+            return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+        }
 
-        window.renderApp = function() {
+        function getDisplayMonth(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+        }
+
+        function formatCurrency(amount) {
+            return '₹' + parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function renderApp() {
             const tbody = document.getElementById('expenseTableBody');
             const noExpensesMsg = document.getElementById('noExpenses');
             const clearBtn = document.getElementById('clearBtn');
             const noChartData = document.getElementById('noChartData');
 
             tbody.innerHTML = '';
+            
             if (expenses.length === 0) {
-                noExpensesMsg.style.display = 'block'; clearBtn.style.display = 'none'; noChartData.style.display = 'block';
+                noExpensesMsg.style.display = 'block';
+                clearBtn.style.display = 'none';
+                noChartData.style.display = 'block';
             } else {
-                noExpensesMsg.style.display = 'none'; clearBtn.style.display = 'inline-block'; noChartData.style.display = 'none';
+                noExpensesMsg.style.display = 'none';
+                clearBtn.style.display = 'inline-block';
+                noChartData.style.display = 'none';
+
                 expenses.forEach((exp) => {
                     const userBadge = exp.user ? `<br><small class="text-muted"><i class="fas fa-user me-1"></i>${exp.user}</small>` : '';
                     const row = document.createElement('tr');
@@ -330,19 +344,28 @@
                         <td>${new Date(exp.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
                         <td><span class="badge bg-primary bg-opacity-75">${exp.category}</span>${userBadge}</td>
                         <td>${exp.description}</td>
-                        <td class="text-end text-success fw-bold">${window.formatCurrency(exp.amount)}</td>
-                        <td class="text-center"><button class="btn btn-danger btn-sm" onclick="window.deleteExpense('${exp.id}')"><i class="fas fa-trash"></i></button></td>
+                        <td class="text-end text-success fw-bold">${formatCurrency(exp.amount)}</td>
+                        <td class="text-center">
+                            <button class="btn btn-danger btn-sm" onclick="window.deleteExpense('${exp.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
                     `;
                     tbody.appendChild(row);
                 });
             }
-            updateSummary(); updateChart(); updateMonthlyTotals(); updateFamilyComparison();
+
+            updateSummary();
+            updateChart();
+            updateMonthlyTotals();
+            updateFamilyComparison();
         }
 
         document.getElementById('expenseForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
             btn.disabled = true;
 
             try {
@@ -359,77 +382,142 @@
             } catch (error) {
                 alert("Error saving: " + error.message);
             }
-            btn.innerHTML = '<i class="fas fa-plus me-1"></i> Add Expense';
+            btn.innerHTML = originalText;
             btn.disabled = false;
         });
 
         window.deleteExpense = async function(id) {
             if(confirm('Delete this expense?')) {
-                try { await deleteDoc(doc(db, "expenses", id)); } catch (error) { alert("Error: " + error.message); }
+                try {
+                    await deleteDoc(doc(db, "expenses", id));
+                } catch (error) {
+                    alert("Error deleting: " + error.message);
+                }
             }
         }
 
         window.clearAllExpenses = async function() {
             if(confirm('Are you sure you want to delete ALL expenses? This cannot be undone.')) {
-                const snapshot = await getDocs(expensesCollection);
-                const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-                await Promise.all(deletePromises);
+                try {
+                    const snapshot = await getDocs(expensesCollection);
+                    const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+                    await Promise.all(deletePromises);
+                } catch (error) {
+                    alert("Error clearing: " + error.message);
+                }
             }
         }
 
         function updateSummary() {
-            const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
-            document.getElementById('totalExpenses').textContent = window.formatCurrency(total);
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            let currentMonthTotal = 0;
+            let overallTotal = 0;
+
+            expenses.forEach(exp => {
+                const amount = parseFloat(exp.amount) || 0;
+                overallTotal += amount;
+                
+                const dateParts = exp.date.split('-');
+                if (dateParts.length === 3) {
+                    const expYear = parseInt(dateParts[0], 10);
+                    const expMonth = parseInt(dateParts[1], 10) - 1;
+                    
+                    if (expYear === currentYear && expMonth === currentMonth) {
+                        currentMonthTotal += amount;
+                    }
+                }
+            });
+
+            document.getElementById('currentMonthExpenses').textContent = formatCurrency(currentMonthTotal);
+            document.getElementById('overallExpenses').textContent = formatCurrency(overallTotal);
             document.getElementById('totalItems').textContent = expenses.length;
+
             const categories = {};
-            expenses.forEach(exp => { categories[exp.category] = (categories[exp.category] || 0) + parseFloat(exp.amount); });
-            const topCat = Object.keys(categories).reduce((a, b) => categories[a] > categories[b] ? a : b, '-');
-            document.getElementById('topCategory').textContent = expenses.length > 0 ? topCat : '-';
+            expenses.forEach(exp => { 
+                const cat = exp.category || 'Uncategorized';
+                categories[cat] = (categories[cat] || 0) + (parseFloat(exp.amount) || 0); 
+            });
+            
+            const topCat = Object.keys(categories).length > 0 
+                ? Object.keys(categories).reduce((a, b) => categories[a] > categories[b] ? a : b) 
+                : '-';
+            document.getElementById('topCategory').textContent = topCat;
         }
 
         function updateMonthlyTotals() {
             const monthlyData = {};
             expenses.forEach(exp => {
-                const sortKey = window.getSortKey(exp.date);
-                if (!monthlyData[sortKey]) monthlyData[sortKey] = { display: window.getDisplayMonth(exp.date), total: 0 };
+                const sortKey = getSortKey(exp.date);
+                const displayMonth = getDisplayMonth(exp.date);
+                if (!monthlyData[sortKey]) {
+                    monthlyData[sortKey] = { display: displayMonth, total: 0 };
+                }
                 monthlyData[sortKey].total += parseFloat(exp.amount);
             });
+
             const tbody = document.getElementById('monthlyTotalBody');
             const noDataMsg = document.getElementById('noMonthlyData');
             tbody.innerHTML = '';
             const sortedKeys = Object.keys(monthlyData).sort().reverse();
-            if (sortedKeys.length === 0) { noDataMsg.style.display = 'block'; } 
-            else {
+
+            if (sortedKeys.length === 0) {
+                noDataMsg.style.display = 'block';
+            } else {
                 noDataMsg.style.display = 'none';
                 sortedKeys.forEach(key => {
-                    tbody.innerHTML += `<tr><td class="fw-bold">${monthlyData[key].display}</td><td class="text-end text-success fw-bold fs-5">${window.formatCurrency(monthlyData[key].total)}</td></tr>`;
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="fw-bold">${monthlyData[key].display}</td>
+                        <td class="text-end text-success fw-bold fs-5">${formatCurrency(monthlyData[key].total)}</td>
+                    `;
+                    tbody.appendChild(row);
                 });
             }
         }
 
         function updateFamilyComparison() {
             const users = [...new Set(expenses.map(e => e.user || 'Me'))].sort();
-            const monthKeys = [...new Set(expenses.map(e => window.getSortKey(e.date)))].sort().reverse();
+            const monthKeys = [...new Set(expenses.map(e => getSortKey(e.date)))].sort().reverse();
+            
             const headRow = document.getElementById('familyTableHead');
             const tbody = document.getElementById('familyTableBody');
             const noDataMsg = document.getElementById('noFamilyData');
-            headRow.innerHTML = ''; tbody.innerHTML = '';
-            if (expenses.length === 0) { noDataMsg.style.display = 'block'; return; }
+            
+            headRow.innerHTML = '';
+            tbody.innerHTML = '';
+            
+            if (expenses.length === 0) {
+                noDataMsg.style.display = 'block';
+                return;
+            }
             noDataMsg.style.display = 'none';
+            
             let headerHTML = '<tr><th>Month & Year</th>';
-            users.forEach(user => { headerHTML += `<th class="text-end">${user}</th>`; });
+            users.forEach(user => {
+                headerHTML += `<th class="text-end">${user}</th>`;
+            });
             headerHTML += '<th class="text-end text-primary">Total</th></tr>';
             headRow.innerHTML = headerHTML;
+            
             monthKeys.forEach(monthKey => {
-                const monthExpenses = expenses.filter(e => window.getSortKey(e.date) === monthKey);
-                let rowHTML = `<tr><td class="fw-bold">${window.getDisplayMonth(monthExpenses[0].date)}</td>`;
+                const monthExpenses = expenses.filter(e => getSortKey(e.date) === monthKey);
+                const displayMonth = getDisplayMonth(monthExpenses[0].date);
+                
+                let rowHTML = `<tr><td class="fw-bold">${displayMonth}</td>`;
                 let monthTotal = 0;
+                
                 users.forEach(user => {
-                    const userTotal = monthExpenses.filter(e => (e.user || 'Me') === user).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+                    const userTotal = monthExpenses
+                        .filter(e => (e.user || 'Me') === user)
+                        .reduce((sum, e) => sum + parseFloat(e.amount), 0);
                     monthTotal += userTotal;
-                    rowHTML += `<td class="text-end">${window.formatCurrency(userTotal)}</td>`;
+                    rowHTML += `<td class="text-end">${formatCurrency(userTotal)}</td>`;
                 });
-                rowHTML += `<td class="text-end text-primary fw-bold">${window.formatCurrency(monthTotal)}</td></tr>`;
+                
+                rowHTML += `<td class="text-end text-primary fw-bold">${formatCurrency(monthTotal)}</td></tr>`;
                 tbody.innerHTML += rowHTML;
             });
         }
@@ -437,16 +525,40 @@
         function updateChart() {
             const ctx = document.getElementById('expenseChart').getContext('2d');
             const categories = {};
-            expenses.forEach(exp => { categories[exp.category] = (categories[exp.category] || 0) + parseFloat(exp.amount); });
+            
+            expenses.forEach(exp => {
+                categories[exp.category] = (categories[exp.category] || 0) + parseFloat(exp.amount);
+            });
+
+            const labels = Object.keys(categories);
+            const data = Object.values(categories);
+
             if (myChart) myChart.destroy();
-            if (Object.keys(categories).length > 0) {
+
+            if (labels.length > 0) {
                 myChart = new Chart(ctx, {
                     type: 'doughnut',
-                    data: { labels: Object.keys(categories), datasets: [{ data: Object.values(categories), backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40', '#c9cbcf'], borderWidth: 2, borderColor: '#ffffff' }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40', '#c9cbcf'],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10 } }
+                        }
+                    }
                 });
             }
         }
+
+        // Initial Render is handled automatically by the onSnapshot listener
     </script>
 </body>
 </html>
