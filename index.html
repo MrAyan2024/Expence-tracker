@@ -29,9 +29,7 @@
             margin: 0 5px;
             background: rgba(255, 255, 255, 0.9);
         }
-        .nav-pills .nav-link:hover {
-            background: rgba(255, 255, 255, 1);
-        }
+        .nav-pills .nav-link:hover { background: rgba(255, 255, 255, 1); }
         .nav-pills .nav-link.active {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -55,16 +53,58 @@
         .summary-card p { color: #666; margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
         .icon-box { font-size: 2rem; }
         .chart-container { position: relative; height: 250px; width: 100%; display: flex; justify-content: center; }
+
+        /* --- NEW AUTHENTICATION STYLES --- */
+        #authScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .auth-card { background: white; padding: 40px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .auth-tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+        .auth-tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; color: #667eea; font-weight: bold; }
+        .auth-tab.active { border-bottom: 3px solid #667eea; }
     </style>
 </head>
 <body>
 
-    <div class="container main-container">
-        <!-- Header -->
-        <div class="text-center mb-4">
-            <h1 class="text-white display-5 fw-bold"><i class="fas fa-wallet me-2"></i>Expense Tracker</h1>
-            <p class="text-white-50">Developed by Ayan Paul</p>
+    <!-- AUTHENTICATION SCREEN (Visible by default) -->
+    <div id="authScreen">
+        <div class="auth-card">
+            <h3 class="text-center mb-4" style="color: #667eea;"><i class="fas fa-wallet me-2"></i>Expense Tracker</h3>
+            <div class="auth-tabs">
+                <div class="auth-tab active" id="tabLogin" onclick="window.switchAuthTab('login')">Login</div>
+                <div class="auth-tab" id="tabSignup" onclick="window.switchAuthTab('signup')">Sign Up</div>
+            </div>
+            
+            <div id="loginForm">
+                <input type="email" id="loginEmail" class="form-control mb-3" placeholder="Email Address">
+                <input type="password" id="loginPassword" class="form-control mb-3" placeholder="Password">
+                <button class="btn btn-primary w-100" onclick="window.loginUser()">Login</button>
+            </div>
+
+            <div id="signupForm" style="display: none;">
+                <input type="email" id="signupEmail" class="form-control mb-3" placeholder="Email Address">
+                <input type="password" id="signupPassword" class="form-control mb-3" placeholder="Password (min 6 chars)">
+                <button class="btn btn-primary w-100" onclick="window.signupUser()">Create Account</button>
+            </div>
+            <p id="authError" class="text-danger text-center mt-3 mb-0" style="display: none; font-size: 0.9rem;"></p>
         </div>
+    </div>
+
+    <!-- MAIN APP (Hidden until logged in) -->
+    <div class="container main-container" id="mainApp" style="display: none;">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="text-white display-5 fw-bold mb-0"><i class="fas fa-wallet me-2"></i>Expense Tracker</h1>
+                <p class="text-white-50 mb-0">Developed by Ayan Paul</p>
+            </div>
+            <button class="btn btn-outline-light btn-sm" onclick="window.logoutUser()">
+                <i class="fas fa-sign-out-alt me-1"></i> Logout
+            </button>
+        </div>
+        <p class="text-white-50 text-center mb-4">Logged in as: <span id="userEmailDisplay" class="fw-bold text-white"></span></p>
 
         <!-- Tab Navigation -->
         <ul class="nav nav-pills mb-4 justify-content-center" id="pills-tab" role="tablist">
@@ -279,6 +319,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // --- NEW: Firebase Auth Imports ---
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         // --- PASTE YOUR FIREBASE CONFIG HERE ---
         const firebaseConfig = {
@@ -294,20 +336,80 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app); // Initialize Auth
         const expensesCollection = collection(db, "expenses");
 
         let expenses = [];
         let myChart = null;
+        let currentUser = null;
+        let unsubscribe = null;
 
-        document.getElementById('date').valueAsDate = new Date();
+        // --- AUTHENTICATION FUNCTIONS ---
+        window.switchAuthTab = function(tab) {
+            document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+            document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
+            document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+            document.getElementById('signupForm').style.display = tab === 'signup' ? 'block' : 'none';
+            document.getElementById('authError').style.display = 'none';
+        }
 
-        // --- REAL-TIME LISTENER (Replaces Local Storage) ---
-        const q = query(expensesCollection, orderBy("date", "desc"));
-        onSnapshot(q, (snapshot) => {
-            expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderApp();
+        window.signupUser = async function() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                showAuthError(error.message);
+            }
+        }
+
+        window.loginUser = async function() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                showAuthError(error.message);
+            }
+        }
+
+        window.logoutUser = async function() {
+            await signOut(auth);
+        }
+
+        function showAuthError(msg) {
+            const errEl = document.getElementById('authError');
+            errEl.textContent = msg.replace('Firebase: ', '');
+            errEl.style.display = 'block';
+        }
+
+        // --- AUTH STATE LISTENER (Controls App Visibility) ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('userEmailDisplay').textContent = user.email;
+                document.getElementById('date').valueAsDate = new Date();
+                startRealtimeListener();
+            } else {
+                currentUser = null;
+                document.getElementById('authScreen').style.display = 'flex';
+                document.getElementById('mainApp').style.display = 'none';
+                if (unsubscribe) unsubscribe(); // Stop listening when logged out
+            }
         });
 
+        function startRealtimeListener() {
+            if (unsubscribe) unsubscribe();
+            const q = query(expensesCollection, orderBy("date", "desc"));
+            unsubscribe = onSnapshot(q, (snapshot) => {
+                expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderApp();
+            });
+        }
+
+        // --- YOUR EXACT EXISTING LOGIC BELOW ---
         function getSortKey(dateString) {
             const date = new Date(dateString);
             return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
@@ -365,6 +467,7 @@
 
         document.getElementById('expenseForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            if (!currentUser) return; // Safety check
             const btn = document.getElementById('submitBtn');
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
@@ -376,7 +479,8 @@
                     user: document.getElementById('user').value,
                     category: document.getElementById('category').value,
                     description: document.getElementById('description').value,
-                    amount: document.getElementById('amount').value
+                    amount: document.getElementById('amount').value,
+                    createdBy: currentUser.email // Tracks who added it
                 });
                 document.getElementById('category').value = '';
                 document.getElementById('description').value = '';
@@ -559,8 +663,6 @@
                 });
             }
         }
-
-        // Initial Render is handled automatically by the onSnapshot listener
     </script>
 </body>
 </html>
