@@ -171,14 +171,13 @@
                                         <div class="col-md-2">
                                             <input type="date" class="form-control" id="date" required>
                                         </div>
-                                        <div class="col-md-2">
-                                            <select class="form-select" id="user" required>
-                                                <option value="Husband">Husband</option>
-                                                <option value="Wife">Wife</option>
-                                                <option value="Child">Child</option>
-                                                <option value="Parents">Parents</option>
-                                                <option value="Other">Other</option>
-                                            </select>
+                                        <div class="col-md-3">
+                                            <div class="input-group">
+                                                <select class="form-select" id="user" required></select>
+                                                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#manageMembersModal" title="Manage Members">
+                                                    <i class="fas fa-cog"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                         <div class="col-md-3">
                                             <select class="form-select" id="category" required>
@@ -197,8 +196,8 @@
                                                 <option value="Stocks+">📈 Stocks+</option>
                                             </select>
                                         </div>
-                                        <div class="col-md-3">
-                                            <input type="text" class="form-control" id="description" placeholder="Description" required>
+                                        <div class="col-md-2">
+                                            <input type="text" class="form-control" id="description" placeholder="Desc" required>
                                         </div>
                                         <div class="col-md-2">
                                             <input type="number" class="form-control" id="amount" placeholder="₹0.00" step="0.01" required>
@@ -315,14 +314,35 @@
         </div>
     </div>
 
+    <!-- Manage Members Modal -->
+    <div class="modal fade" id="manageMembersModal" tabindex="-1" aria-labelledby="manageMembersModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h5 class="modal-title" id="manageMembersModalLabel"><i class="fas fa-users-cog me-2"></i>Manage Members</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="newMemberName" placeholder="Enter new member name" onkeydown="if(event.key === 'Enter') { event.preventDefault(); window.addNewMember(); }">
+                        <button class="btn btn-primary" type="button" onclick="window.addNewMember()"><i class="fas fa-plus me-1"></i> Add</button>
+                    </div>
+                    <ul class="list-group" id="membersList">
+                        <!-- Populated dynamically -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        // CHANGE 1: Added 'where' to the imports
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, getDocs, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // Added 'updateDoc' to the imports for renaming members in Firebase
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, getDocs, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         // --- NEW: Firebase Auth Imports ---
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -347,6 +367,108 @@
         let myChart = null;
         let currentUser = null;
         let unsubscribe = null;
+
+        // --- MEMBER MANAGEMENT ---
+        let members = JSON.parse(localStorage.getItem('myExpenseMembers')) || ["Husband", "Wife", "Child", "Parents", "Other"];
+
+        function saveMembers() {
+            localStorage.setItem('myExpenseMembers', JSON.stringify(members));
+        }
+
+        window.renderUserDropdown = function() {
+            const userSelect = document.getElementById('user');
+            const currentValue = userSelect.value;
+            userSelect.innerHTML = '';
+            members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member;
+                option.textContent = member;
+                userSelect.appendChild(option);
+            });
+            if (currentValue && members.includes(currentValue)) {
+                userSelect.value = currentValue;
+            }
+        }
+
+        window.renderMembersList = function() {
+            const list = document.getElementById('membersList');
+            list.innerHTML = '';
+            members.forEach((member, index) => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.innerHTML = `
+                    <span>${member}</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="window.editMember(${index})" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="window.deleteMember(${index})" title="Delete" ${members.length <= 1 ? 'disabled' : ''}>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        window.addNewMember = function() {
+            const input = document.getElementById('newMemberName');
+            const name = input.value.trim();
+            if (name && !members.includes(name)) {
+                members.push(name);
+                saveMembers();
+                window.renderUserDropdown();
+                window.renderMembersList();
+                input.value = '';
+                document.getElementById('user').value = name;
+            } else if (members.includes(name)) {
+                alert('Member already exists!');
+            }
+        }
+
+        window.editMember = async function(index) {
+            const newName = prompt("Edit member name:", members[index]);
+            if (newName !== null && newName.trim() !== "" && newName.trim() !== members[index]) {
+                const trimmedName = newName.trim();
+                if (members.includes(trimmedName)) {
+                    alert('Member name already exists!');
+                    return;
+                }
+                const oldName = members[index];
+                members[index] = trimmedName;
+                saveMembers();
+                window.renderUserDropdown();
+                window.renderMembersList();
+                
+                // Update existing expenses in Firebase to reflect the new name for historical consistency
+                if (currentUser) {
+                    try {
+                        const q = query(expensesCollection, where("userId", "==", currentUser.uid), where("user", "==", oldName));
+                        const snapshot = await getDocs(q);
+                        const updatePromises = snapshot.docs.map(docSnap => 
+                            updateDoc(doc(db, "expenses", docSnap.id), { user: trimmedName })
+                        );
+                        await Promise.all(updatePromises);
+                    } catch (error) {
+                        console.error("Error updating expenses:", error);
+                        alert("Error updating historical expenses: " + error.message);
+                    }
+                }
+            }
+        }
+
+        window.deleteMember = function(index) {
+            if (members.length <= 1) {
+                alert("You must have at least one member.");
+                return;
+            }
+            if (confirm(`Delete "${members[index]}"? Historical expenses will retain this name.`)) {
+                members.splice(index, 1);
+                saveMembers();
+                window.renderUserDropdown();
+                window.renderMembersList();
+            }
+        }
 
         // --- AUTHENTICATION FUNCTIONS ---
         window.switchAuthTab = function(tab) {
@@ -395,6 +517,11 @@
                 document.getElementById('mainApp').style.display = 'block';
                 document.getElementById('userEmailDisplay').textContent = user.email;
                 document.getElementById('date').valueAsDate = new Date();
+                
+                // Initialize member dropdown and list on login
+                window.renderUserDropdown();
+                window.renderMembersList();
+                
                 startRealtimeListener();
             } else {
                 currentUser = null;
